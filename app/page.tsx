@@ -1,65 +1,255 @@
-import Image from "next/image";
+// src/app/page.tsx
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect } from "react";
+import JournalForm from "@/components/JournalForm";
+import JournalList from "@/components/JournalList";
+import JournalDetailModal from "@/components/JournalDetailModal";
+import CalendarView from "@/components/CalendarHeatmap";
+import ChatView from "@/components/ChatView";
+import AnalyticsView from "@/components/AnalyticsView";
+import SettingsView from "@/components/SettingsView";
+import UpgradeView from "@/components/UpgradeView";
+import PersonalizeView from "@/components/PersonalizeView";
+import TopPage from "@/components/TopPage";
+import SideMenu from "@/components/SideMenu";
+
+import {
+  HomeIcon,
+  CalendarIcon,
+  ChatBubbleLeftRightIcon,
+  PlusIcon,
+  ChartBarIcon,
+  ChevronLeftIcon,
+} from "@/components/Icons";
+
+import { JournalEntry, JournalFormData, View, User } from "@/types/types";
+import { analyzeJournalEntry } from "@/services/journalAnalysisService";
+import * as authService from "@/services/authService";
+import { generateDummyData } from "@/data/dummyData";
+
+export default function Page() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const [view, setView] = useState<View>("JOURNAL");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // --- 初期化 ---
+  useEffect(() => {
+    const user = authService.getCurrentUser();
+    if (user) setCurrentUser(user);
+  }, []);
+
+  // --- 日記データロード ---
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const key = `journalEntries_${currentUser.email}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        setEntries(
+          JSON.parse(stored).map((e: any) => ({
+            ...e,
+            createdAt: new Date(e.createdAt),
+          }))
+        );
+      } else {
+        setEntries(generateDummyData());
+      }
+    } catch (e) {
+      console.error("Failed to load journal:", e);
+    }
+  }, [currentUser]);
+
+  // --- 日記保存 ---
+  useEffect(() => {
+    if (!currentUser || entries.length === 0) return;
+    try {
+      const key = `journalEntries_${currentUser.email}`;
+      const real = entries.some((e) => !e.id.startsWith("dummy-"));
+      if (real) localStorage.setItem(key, JSON.stringify(entries));
+    } catch (e) {
+      console.error("Failed to save journal:", e);
+    }
+  }, [entries, currentUser]);
+
+  // --- ハンドラ類 ---
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    authService.setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setCurrentUser(null);
+    setEntries([]);
+  };
+
+  const handleSaveEntry = async (formData: JournalFormData) => {
+    if (!currentUser) return;
+    setIsLoading(true);
+    try {
+      const analysis = await analyzeJournalEntry(formData);
+      const newEntry: JournalEntry = {
+        id: new Date().toISOString(),
+        createdAt: new Date(),
+        ...formData,
+        summary: analysis.summary,
+        emotionLabel: analysis.emotions,
+        tags: analysis.tags,
+      };
+      setEntries((prev) =>
+        [newEntry, ...prev.filter((e) => !e.id.startsWith("dummy-"))].sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        )
+      );
+      setIsFormOpen(false);
+    } catch (e) {
+      console.error("Failed to analyze:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUserUpdate = (updated: User) => {
+    const result = authService.updateUser(updated);
+    if (result.success && result.user) setCurrentUser(result.user);
+  };
+
+  const handleSelectEntry = (entry: JournalEntry) => setSelectedEntry(entry);
+  const handleCloseModal = () => setSelectedEntry(null);
+
+  const headerTitle: Record<View, string> = {
+    JOURNAL: "日記",
+    CALENDAR: "カレンダー",
+    ANALYTICS: "感情分析",
+    CHAT: "AIチャット",
+    SETTINGS: "設定",
+    UPGRADE: "プランをアップグレード",
+    PERSONALIZE: "パーソナライズ",
+  };
+
+  const hasTodaysEntry = entries.some(
+    (e) =>
+      e.createdAt.toISOString().split("T")[0] ===
+      new Date().toISOString().split("T")[0]
+  );
+  const isSubView = ["SETTINGS", "UPGRADE", "PERSONALIZE"].includes(view);
+
+  const renderView = () => {
+    switch (view) {
+      case "CALENDAR":
+        return (
+          <div style={{ padding: "1rem" }}>
+            <CalendarView entries={entries} onSelectEntry={handleSelectEntry} />
+          </div>
+        );
+      case "ANALYTICS":
+        return <AnalyticsView entries={entries} user={currentUser!} />;
+      case "CHAT":
+        return (
+          <ChatView
+            entries={entries}
+            onSaveReport={() => {}}
+            hasTodaysEntry={hasTodaysEntry}
+            user={currentUser!}
+          />
+        );
+      case "SETTINGS":
+        return (
+          <SettingsView user={currentUser!} onUpdateUser={handleUserUpdate} />
+        );
+      case "UPGRADE":
+        return <UpgradeView />;
+      case "PERSONALIZE":
+        return <PersonalizeView />;
+      case "JOURNAL":
+      default:
+        return (
+          <JournalList entries={entries} onSelectEntry={handleSelectEntry} />
+        );
+    }
+  };
+
+  if (!currentUser) return <TopPage onLoginSuccess={handleLoginSuccess} />;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="app-container">
+      {/* ヘッダー */}
+      <header className="app-header">
+        <div className="header-content">
+          <div className="left">
+            {isSubView ? (
+              <button onClick={() => setView("JOURNAL")} className="back-btn">
+                <ChevronLeftIcon className="icon" />
+              </button>
+            ) : (
+              <button onClick={() => setIsMenuOpen(true)} className="menu-btn">
+                {currentUser.picture ? (
+                  <img
+                    src={currentUser.picture}
+                    alt="avatar"
+                    className="avatar"
+                  />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {(currentUser.name || currentUser.email)[0].toUpperCase()}
+                  </div>
+                )}
+              </button>
+            )}
+          </div>
+          <h1 className="header-title">{headerTitle[view]}</h1>
+          <div className="right" />
+        </div>
+      </header>
+
+      <main className="app-main">{renderView()}</main>
+
+      {view !== "CHAT" && !isSubView && (
+        <button onClick={() => setIsFormOpen(true)} className="fab">
+          <PlusIcon className="icon" />
+        </button>
+      )}
+
+      {!isSubView && (
+        <footer className="app-footer">
+          {[
+            { v: "JOURNAL", i: HomeIcon, l: "日記" },
+            { v: "CALENDAR", i: CalendarIcon, l: "カレンダー" },
+            { v: "ANALYTICS", i: ChartBarIcon, l: "分析" },
+            { v: "CHAT", i: ChatBubbleLeftRightIcon, l: "チャット" },
+          ].map((n) => (
+            <button
+              key={n.v}
+              onClick={() => setView(n.v as View)}
+              className={`nav-btn ${view === n.v ? "active" : ""}`}
+            >
+              <n.i className="icon" />
+              <span>{n.l}</span>
+            </button>
+          ))}
+        </footer>
+      )}
+
+      {isFormOpen && (
+        <JournalForm
+          onSave={handleSaveEntry}
+          onClose={() => setIsFormOpen(false)}
+          isLoading={isLoading}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
+      <JournalDetailModal entry={selectedEntry} onClose={handleCloseModal} />
+      <SideMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        user={currentUser}
+        onLogout={handleLogout}
+        onNavigate={setView}
+      />
     </div>
   );
 }
