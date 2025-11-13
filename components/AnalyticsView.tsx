@@ -40,7 +40,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ entries, user }) => {
     setHasTriggeredAnalysis(false);
     setAnalysisError(null);
     setIsLoading(false);
-  }, [entries.length, user]);
+  }, [entries, user]);
 
   const handleRunAnalysis = async () => {
     if (isLoading || entries.length < 3) return;
