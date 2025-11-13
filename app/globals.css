@@ -2858,6 +2858,76 @@ a {
   animation: fade-in 0.6s ease-in-out;
 }
 
+.analysis-trigger-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #ecfeff 0%, #f5f3ff 100%);
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.15);
+}
+
+.analysis-trigger-copy h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.analysis-trigger-copy p {
+  color: #475569;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.analysis-trigger-hint {
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.analysis-trigger-error {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.analysis-trigger-button {
+  align-self: flex-start;
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.75rem 1.75rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
+}
+
+.analysis-trigger-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.3);
+}
+
+.analysis-trigger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .analysis-trigger-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .analysis-trigger-button {
+    align-self: auto;
+  }
+}
+
 /* セクション分割 */
 .analytics-section {
   display: flex;
@@ -2940,6 +3010,11 @@ a {
 .placeholder-text {
   color: #94a3b8;
   font-size: 0.9rem;
+  font-style: italic;
+}
+
+.theme-placeholder {
+  color: #94a3b8;
   font-style: italic;
 }
 

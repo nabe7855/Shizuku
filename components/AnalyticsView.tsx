@@ -27,45 +27,38 @@ interface AnalyticsViewProps {
 
 const AnalyticsView: React.FC<AnalyticsViewProps> = ({ entries, user }) => {
   const [analysis, setAnalysis] = useState<JournalAnalysis | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [reportContent, setReportContent] = useState<string | null>(null);
   const [reportTitle, setReportTitle] = useState("");
+  const [hasTriggeredAnalysis, setHasTriggeredAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchAnalysis = async () => {
-      setIsLoading(true);
+    setAnalysis(null);
+    setHasTriggeredAnalysis(false);
+    setAnalysisError(null);
+    setIsLoading(false);
+  }, [entries.length, user]);
+
+  const handleRunAnalysis = async () => {
+    if (isLoading || entries.length < 3) return;
+    setHasTriggeredAnalysis(true);
+    setIsLoading(true);
+    setAnalysisError(null);
+    try {
       const result = await analyzePatternsAndInsights(entries, user);
       setAnalysis(result);
+    } catch (error) {
+      console.error("Failed to analyze entries:", error);
+      setAnalysisError(
+        "AI分析の実行中にエラーが発生しました。時間を置いて再度お試しください。"
+      );
+    } finally {
       setIsLoading(false);
-    };
-
-    if (entries.length > 2) {
-      fetchAnalysis();
-    } else {
-      setIsLoading(false);
-      setAnalysis({
-        keywords: [],
-        coreValues: [],
-        overallInsight:
-          "分析するのに十分なデータがありません。日記を3つ以上書くと、より詳細な分析が見られるようになります。",
-        monthlyTheme: "",
-        personalityTraits: {
-          openness: 0,
-          conscientiousness: 0,
-          extraversion: 0,
-          agreeableness: 0,
-          neuroticism: 0,
-        },
-        topStrengths: [],
-        comprehensiveReport:
-          "### レポート\n分析するのに十分なデータがありません。日記を3つ以上書くと、あなたのための総合レポートが読めるようになります。",
-        mbtiType: "",
-        mbtiScores: { ei: 0, sn: 0, tf: 0, jp: 0 },
-      });
     }
-  }, [entries, user]);
+  };
 
   const handleGenerateReport = async (
     reportType: ReportType,
@@ -117,10 +110,38 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ entries, user }) => {
 
   return (
     <div className="analytics-container">
+      <div className="analysis-trigger-card">
+        <div className="analysis-trigger-copy">
+          <h3>AI分析を実行する</h3>
+          <p>
+            過去の日記をもとにした詳細なレポートを必要なときだけ生成できます。
+          </p>
+          {!hasTriggeredAnalysis && (
+            <p className="analysis-trigger-hint">
+              ※ 「AI分析を実行」ボタンを押すと初めてAIが作動します
+            </p>
+          )}
+          {analysisError && (
+            <p className="analysis-trigger-error">{analysisError}</p>
+          )}
+        </div>
+        <button
+          className="analysis-trigger-button"
+          onClick={handleRunAnalysis}
+          disabled={isLoading || entries.length < 3}
+        >
+          {isLoading ? "分析中..." : "AI分析を実行"}
+        </button>
+      </div>
       {/* 総合レポート */}
       <div className="analytics-section">
         <ComprehensiveReportCard
-          report={analysis?.comprehensiveReport ?? null}
+          report={
+            analysis?.comprehensiveReport ??
+            (!hasTriggeredAnalysis
+              ? "AI分析はまだ実行されていません。ボタンを押して最新のレポートを生成しましょう。"
+              : null)
+          }
           isLoading={isLoading}
         />
         <MonthlyThemeCard
