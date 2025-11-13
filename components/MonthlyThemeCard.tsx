@@ -29,8 +29,12 @@ const MonthlyThemeCard: React.FC<MonthlyThemeCardProps> = ({
 
       {isLoading ? (
         <SkeletonLoader className="theme-skeleton" />
-      ) : (
+      ) : theme ? (
         <p className="theme-text">「{theme}」</p>
+      ) : (
+        <p className="theme-text theme-placeholder">
+          AI分析を実行すると今月のテーマが表示されます。
+        </p>
       )}
     </div>
 
