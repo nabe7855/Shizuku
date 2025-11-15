@@ -54,5 +54,5 @@
   ],
 
   /* === 除外ファイル === */
-  "exclude": ["node_modules"]
+  "exclude": ["services/node_modules"]
 }

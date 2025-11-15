@@ -1,112 +1,99 @@
 /**
  * @file アプリケーションのトップページ。
- * 未ログインのユーザーに対して、ログインフォームまたは会員登録フォームを表示します。
- * メール/パスワード認証とGoogleアカウントによる認証をサポートします。
+ * Supabaseを使って会員登録・ログインを行う本物の認証画面。
  */
-import React, { useState, useEffect } from 'react';
-import { DropletIcon, GoogleIcon } from './Icons';
-import * as authService from '../services/authService';
-import { User } from '../types/types';
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import React, { useState } from "react";
+import { DropletIcon, GoogleIcon } from "./Icons";
+
+// ★ Supabase 認証ロジック
+import { register, login } from "../services/authService";
+
+import { User } from "../types/types";
+
+import { logout } from "../services/authService";
+
 
 interface TopPageProps {
   onLoginSuccess: (user: User) => void;
 }
 
+const handleLogout = async () => {
+  const result = await logout();
+  if (result.success) {
+    alert("ログアウトしました！");
+    // ログインページに戻るなど
+    window.location.reload();
+  } else {
+    alert("ログアウトに失敗しました…");
+  }
+};
+
 const TopPage: React.FC<TopPageProps> = ({ onLoginSuccess }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoginEnabled, setIsGoogleLoginEnabled] = useState(false);
 
-  useEffect(() => {
-    const handleCredentialResponse = (response: any) => {
-      setIsLoading(true);
-      setError('');
-      try {
-        const result = authService.loginOrRegisterWithGoogle(response.credential);
-        if (result.success && result.user) {
-          onLoginSuccess(result.user);
-        } else {
-          setError(result.message);
-        }
-      } catch {
-        setError('Googleログイン中にエラーが発生しました。');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // ------------------------
+  // Googleログイン（後で実装する！）
+  // ------------------------
+  const handleGoogleLogin = () => {
+    alert("Googleログインは後で実装します💙");
+  };
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-
-    if (window.google && clientId) {
-      setIsGoogleLoginEnabled(true);
-      try {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleCredentialResponse,
-        });
-        window.google.accounts.id.renderButton(
-          document.getElementById('googleSignInButton'),
-          {
-            theme: 'outline',
-            size: 'large',
-            type: 'standard',
-            text: 'signin_with',
-            shape: 'pill',
-            width: '336',
-          }
-        );
-      } catch (e) {
-        console.error('Google Identity Servicesの初期化に失敗しました:', e);
-        setIsGoogleLoginEnabled(false);
-      }
-    } else {
-      setIsGoogleLoginEnabled(false);
-      if (!clientId) {
-        console.warn('GOOGLE_CLIENT_IDが設定されていません。');
-      }
-    }
-  }, [onLoginSuccess]);
-
+  // ------------------------
+  // フォーム送信（会員登録 or ログイン）
+  // ------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
+    // ■✦ 会員登録モード ✦■
     if (isRegisterMode) {
       if (password !== confirmPassword) {
-        setError('パスワードが一致しません。');
+        setError("パスワードが一致しません。");
         setIsLoading(false);
         return;
       }
+
       if (password.length < 6) {
-        setError('パスワードは6文字以上で設定してください。');
+        setError("パスワードは6文字以上にしてください。");
         setIsLoading(false);
         return;
       }
-      const result = authService.register(email, password);
-      if (result.success && result.user) {
-        onLoginSuccess(result.user);
-      } else {
+
+      const result = await register(email, password);
+
+      if (!result.success) {
         setError(result.message);
+        setIsLoading(false);
+        return;
       }
-    } else {
-      const result = authService.login(email, password);
-      if (result.success && result.user) {
-        onLoginSuccess(result.user);
-      } else {
-        setError(result.message);
-      }
+
+      alert("確認メールを送ったよ！メールをチェックしてね💙");
+      setIsLoading(false);
+      return;
     }
+
+    // ■✦ ログインモード ✦■
+    const result = await login(email, password);
+
+    if (!result.success || !result.user) {
+setError(result.message ?? "");
+      setIsLoading(false);
+      return;
+    }
+
+    // ログイン成功 → 親コンポーネントへユーザーを渡す
+    onLoginSuccess({
+      email: result.user.email ?? "",
+      name: result.user.email?.split("@")[0] ?? "",
+    });
+
     setIsLoading(false);
   };
 
@@ -117,7 +104,7 @@ const TopPage: React.FC<TopPageProps> = ({ onLoginSuccess }) => {
           <DropletIcon className="auth-logo" />
           <h1 className="auth-title">Mii/Shizuku</h1>
           <p className="auth-subtitle">
-            {isRegisterMode ? '新しい旅を始める' : 'おかえりなさい'}
+            {isRegisterMode ? "新しい旅を始める" : "おかえりなさい"}
           </p>
         </div>
 
@@ -154,9 +141,13 @@ const TopPage: React.FC<TopPageProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`auth-button ${isLoading ? 'loading' : ''}`}
+            className={`auth-button ${isLoading ? "loading" : ""}`}
           >
-            {isLoading ? '処理中...' : isRegisterMode ? '登録して始める' : 'ログイン'}
+            {isLoading
+              ? "処理中..."
+              : isRegisterMode
+              ? "登録して始める"
+              : "ログイン"}
           </button>
         </form>
 
@@ -166,27 +157,23 @@ const TopPage: React.FC<TopPageProps> = ({ onLoginSuccess }) => {
           <div className="line" />
         </div>
 
-        {isGoogleLoginEnabled ? (
-          <div id="googleSignInButton" className="auth-google" />
-        ) : (
-          <div className="auth-google">
-            <button type="button" disabled className="google-disabled">
-              <GoogleIcon className="google-icon" />
-              Googleでログイン
-            </button>
-          </div>
-        )}
+        <div className="auth-google">
+          <button type="button" onClick={handleGoogleLogin}>
+            <GoogleIcon className="google-icon" />
+            Googleでログイン
+          </button>
+        </div>
 
         <div className="auth-switch">
           <button
             onClick={() => {
               setIsRegisterMode(!isRegisterMode);
-              setError('');
+              setError("");
             }}
           >
             {isRegisterMode
-              ? '既にアカウントをお持ちですか？ ログイン'
-              : '初めてですか？ 会員登録'}
+              ? "既にアカウントがありますか？ ログイン"
+              : "初めてですか？ 会員登録"}
           </button>
         </div>
       </div>

@@ -25,7 +25,7 @@ import {
 
 import { JournalEntry, JournalFormData, View, User } from "@/types/types";
 import { analyzeJournalEntry } from "@/services/journalAnalysisService";
-import * as authService from "@/services/authService";
+import * as authService from "@/services/old_authService";
 import { generateDummyData } from "@/data/dummyData";
 
 export default function Page() {
