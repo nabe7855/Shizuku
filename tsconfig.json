@@ -1,0 +1,58 @@
+{
+  "compilerOptions": {
+    /* === 基本ターゲット設定 === */
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+
+    /* === モジュール解決と環境設定 === */
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+
+    /* === JSX / React 設定 === */
+    "jsx": "react-jsx",
+
+    /* === TypeScript 拡張構文 === */
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+
+    /* === コンパイル / チェック制御 === */
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "incremental": true,
+
+    /* === パスエイリアス === */
+    "paths": {
+      "@/*": ["./*"]
+    },
+
+    /* === プラグイン (Next.js対応) === */
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+
+    /* === 型定義 === */
+    "types": ["node"]
+  },
+
+  /* === 対象ファイル設定 === */
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+
+  /* === 除外ファイル === */
+  "exclude": ["services/node_modules"]
+}
